@@ -1,0 +1,146 @@
+import tkinter as tk
+from enum import Enum
+
+class Seed(Enum):
+    EMPTY = ' '
+    CROSS = 'X'
+    NOUGHT = 'O'
+
+class GameState(Enum):
+    PLAYING = 0
+    DRAW = 1
+    CROSS_WON = 2
+    NOUGHT_WON = 3
+
+class Cell:
+    def __init__(self, row, col):
+        self.row = row
+        self.col = col
+        self.clear()
+
+    def clear(self):
+        self.content = Seed.EMPTY
+
+class Board:
+    def __init__(self):
+        self.cells = [[Cell(row, col) for col in range(3)] for row in range(3)]
+
+    def init(self):
+        for row in range(3):
+            for col in range(3):
+                self.cells[row][col].clear()
+
+    def is_draw(self):
+        for row in range(3):
+            for col in range(3):
+                if self.cells[row][col].content == Seed.EMPTY:
+                    return False
+        return True
+
+    def has_won(self, seed, seed_row, seed_col):
+        return (self.cells[seed_row][0].content == seed and self.cells[seed_row][1].content == seed and self.cells[seed_row][2].content == seed or
+                self.cells[0][seed_col].content == seed and self.cells[1][seed_col].content == seed and self.cells[2][seed_col].content == seed or
+                seed_row == seed_col and self.cells[0][0].content == seed and self.cells[1][1].content == seed and self.cells[2][2].content == seed or
+                seed_row + seed_col == 2 and self.cells[0][2].content == seed and self.cells[1][1].content == seed and self.cells[2][0].content == seed)
+
+class GameMain(tk.Canvas):
+    ROWS = 3
+    COLS = 3
+    CELL_SIZE = 100
+    CANVAS_WIDTH = CELL_SIZE * COLS
+    CANVAS_HEIGHT = CELL_SIZE * ROWS
+    GRID_WIDTH = 8
+    GRID_WIDTH_HALF = GRID_WIDTH // 2
+    CELL_PADDING = CELL_SIZE // 6
+    SYMBOL_SIZE = CELL_SIZE - CELL_PADDING * 2
+    SYMBOL_STROKE_WIDTH = 8
+
+    def __init__(self, master=None):
+        super().__init__(master, width=self.CANVAS_WIDTH, height=self.CANVAS_HEIGHT)
+        self.master = master
+        self.board = Board()
+        self.init_game()
+
+        self.bind("<Button-1>", self.on_click)
+
+    def init_game(self):
+        self.board.init()
+        self.current_state = GameState.PLAYING
+        self.current_player = Seed.CROSS
+        self.draw_board()
+        self.display_status()
+
+    def on_click(self, event):
+        if self.current_state == GameState.PLAYING:
+            row_selected = event.y // self.CELL_SIZE
+            col_selected = event.x // self.CELL_SIZE
+
+            if 0 <= row_selected < self.ROWS and 0 <= col_selected < self.COLS and self.board.cells[row_selected][col_selected].content == Seed.EMPTY:
+                self.board.cells[row_selected][col_selected].content = self.current_player
+                self.update_game(row_selected, col_selected)
+                self.current_player = Seed.NOUGHT if self.current_player == Seed.CROSS else Seed.CROSS
+                self.draw_board()
+                self.display_status()
+        else:
+            self.init_game()
+
+    def update_game(self, row, col):
+        if self.board.has_won(self.current_player, row, col):
+            self.current_state = GameState.CROSS_WON if self.current_player == Seed.CROSS else GameState.NOUGHT_WON
+        elif self.board.is_draw():
+            self.current_state = GameState.DRAW
+
+    def draw_board(self):
+        self.delete(tk.ALL)
+        self.draw_grid()
+        self.draw_cells()
+
+    def draw_grid(self):
+        for row in range(1, self.ROWS):
+            self.create_rectangle(0, self.CELL_SIZE * row - self.GRID_WIDTH_HALF, self.CANVAS_WIDTH - 1,
+                                  self.CELL_SIZE * row + self.GRID_WIDTH_HALF, fill="gray")
+
+        for col in range(1, self.COLS):
+            self.create_rectangle(self.CELL_SIZE * col - self.GRID_WIDTH_HALF, 0,
+                                  self.CELL_SIZE * col + self.GRID_WIDTH_HALF, self.CANVAS_HEIGHT - 1, fill="gray")
+
+    def draw_cells(self):
+        for row in range(self.ROWS):
+            for col in range(self.COLS):
+                cell = self.board.cells[row][col]
+                self.draw_cell(cell)
+
+    def draw_cell(self, cell):
+        x1 = cell.col * self.CELL_SIZE + self.CELL_PADDING
+        y1 = cell.row * self.CELL_SIZE + self.CELL_PADDING
+
+        if cell.content == Seed.CROSS:
+            x2 = (cell.col + 1) * self.CELL_SIZE - self.CELL_PADDING
+            y2 = (cell.row + 1) * self.CELL_SIZE - self.CELL_PADDING
+            self.create_line(x1, y1, x2, y2, fill="red", width=self.SYMBOL_STROKE_WIDTH)
+            self.create_line(x2, y1, x1, y2, fill="red", width=self.SYMBOL_STROKE_WIDTH)
+        elif cell.content == Seed.NOUGHT:
+            self.create_oval(x1, y1, x1 + self.SYMBOL_SIZE, y1 + self.SYMBOL_SIZE, outline="blue")
+
+    def display_status(self):
+        if self.current_state == GameState.PLAYING:
+            self.itemconfig(self.create_text(self.CANVAS_WIDTH // 2, self.CANVAS_HEIGHT + 15,
+                                             text=f"{self.current_player.value}'s Turn", font=("Arial", 14), fill="black"))
+        elif self.current_state == GameState.DRAW:
+            self.itemconfig(self.create_text(self.CANVAS_WIDTH // 2, self.CANVAS_HEIGHT + 15,
+                                             text="It's a Draw! Click to play again.", font=("Arial", 14), fill="red"))
+        elif self.current_state == GameState.CROSS_WON:
+            self.itemconfig(self.create_text(self.CANVAS_WIDTH // 2, self.CANVAS_HEIGHT + 15,
+                                             text="'X' Won! Click to play again.", font=("Arial", 14), fill="red"))
+        elif self.current_state == GameState.NOUGHT_WON:
+            self.itemconfig(self.create_text(self.CANVAS_WIDTH // 2, self.CANVAS_HEIGHT + 15,
+                                             text="'O' Won! Click to play again.", font=("Arial", 14), fill="red"))
+
+
+# Run the application
+root = tk.Tk()
+root.title("Tic Tac Toe")
+game_main = GameMain(master=root)
+game_main.pack()
+
+root.mainloop()
