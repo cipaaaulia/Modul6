@@ -46,6 +46,7 @@ lebih lengkapnya dapat dilihat pada code yang disediakan
 ![image](https://github.com/cipaaaulia/Modul6/assets/149106143/07e5a8bf-38b6-4344-8c8e-de1694b17b79)
 
 Hasil saat kode program dijalankan dan dimainkan adalah sebagai berikut :
+
 ![image](https://github.com/cipaaaulia/Modul6/assets/149106143/389edcd9-2fe2-44cd-b64b-5252eb1b86da)
 
 
